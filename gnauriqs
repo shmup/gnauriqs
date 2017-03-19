@@ -19,10 +19,10 @@ FUNC_FILE = os.path.join(PATH, 'funcs.py')
 STORAGE = StrictRedis()
 
 def log(msg):
-    print u'{0} {1}'.format(datetime.now(), msg)
+    print('{0} {1}'.format(datetime.now(), msg))
 
 def err(msg):
-    print u'\033[1;31m{0} {1}\033[m'.format(datetime.now(), msg)
+    print('\033[1;31m{0} {1}\033[m'.format(datetime.now(), msg))
 
 def send(lines):
     if not lines:
@@ -36,12 +36,12 @@ def send(lines):
         STORAGE.expire(NICK, 2)
         STORAGE.incr(NICK)
         STORAGE.expire(NICK, 1)
-        if STORAGE.get(NICK) > 10:
+        if int(STORAGE.get(NICK)) > 10:
             sleep(1)
         log(line)
         # everything should be unicode up the here, then we're sending a
         # string to the socket.
-        SOCKET.sendall('{0}\r\n'.format(line.encode('utf-8', errors='ignore')))
+        SOCKET.sendall(str.encode('{0}\r\n'.format(line)))
 
 def run():
     # Persistent, updated dictionary
@@ -51,30 +51,30 @@ def run():
         'admins': ADMINS,
         'raw': '',
     }
-    readbuffer = ''
+    readbuffer = ''.encode()
     ready = False
     while True:
         readbuffer = readbuffer + SOCKET.recv(1024)
-        lines = readbuffer.split('\n')
+        lines = readbuffer.split('\n'.encode())
         readbuffer = lines.pop()
         for line in lines:
             # everything should be unicode from here
-            line = unicode(line, 'utf-8', errors='ignore').strip()
+            line = line.decode('utf-8', 'strict')
             log(line)
             words = line.split(' ')
             # Don't ping timeout
             if words[0:1] == ['PING'] and words[1:]:
-                log(u'PONG {0}'.format(words[1]))
+                log(str.encode('PONG {0}'.format(words[1])))
                 SOCKET.sendall(
-                    u'PONG {0}\r\n'.format(words[1].encode('utf-8'))
+                    str.encode('PONG {0}\r\n'.format(words[1]))
                 )
             # Wait for ready/end of MOTD
             if not ready and words[1:2] in (['004'], ['376']):
                 ready = True
                 for channel in CHANNELS:
-                    log(u'JOIN {0}'.format(channel))
+                    log(str.encode('JOIN {0}'.format(channel)))
                     SOCKET.sendall(
-                        u'JOIN {0}\r\n'.format(channel.encode('utf-8'))
+                        str.encode('JOIN {0}\r\n'.format(channel))
                     )
             if not ready:
                 continue
@@ -120,13 +120,13 @@ with open(CONF_FILE, 'r') as config:
 
 SOCKET = socket.create_connection((SERVER, PORT))
 if PASSWORD:
-    SOCKET.send('PASS {0}\r\n'.format(PASSWORD))
-SOCKET.send('NICK {0}\r\n'.format(NICK))
-SOCKET.send('USER {0} 0 * :{1}\r\n'.format(NICK, REAL_NAME))
+    SOCKET.send(str.encode('PASS {0}\r\n'.format(PASSWORD)))
+SOCKET.send(str.encode('NICK {0}\r\n'.format(NICK)))
+SOCKET.send(str.encode('USER {0} 0 * :{1}\r\n'.format(NICK, REAL_NAME)))
 
 try:
     run()
 except KeyboardInterrupt:
-    SOCKET.sendall(u'QUIT :Why are you doing this, Hal?\r\n')
+    SOCKET.sendall(b'QUIT :Why are you doing this, Hal?\r\n')
 
 SOCKET.close()
