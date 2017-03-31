@@ -39,8 +39,6 @@ def send(lines):
         if int(STORAGE.get(NICK)) > 10:
             sleep(1)
         log(line)
-        # everything should be unicode up the here, then we're sending a
-        # string to the socket.
         SOCKET.sendall(str.encode('{0}\r\n'.format(line)))
 
 def run():
